@@ -1,134 +1,145 @@
--- UI Library by Roblox Developer
--- Load with: local Library = loadstring(game:HttpGet("URL"))()
+-- ========================================
+-- ROBLOX UI LIBRARY - MODULAR VERSION
+-- ========================================
 
 local Library = {}
 Library.__index = Library
 
--- Theme Configuration
-local Theme = {
-    Primary = Color3.fromRGB(30, 30, 40),
-    Secondary = Color3.fromRGB(40, 40, 50),
-    Accent = Color3.fromRGB(0, 120, 215),
-    Text = Color3.fromRGB(240, 240, 240),
-    SubText = Color3.fromRGB(180, 180, 180),
-    Success = Color3.fromRGB(50, 200, 100),
-    Danger = Color3.fromRGB(220, 60, 60),
-    Border = Color3.fromRGB(60, 60, 70),
-    ToggleOn = Color3.fromRGB(50, 180, 80),
-    ToggleOff = Color3.fromRGB(100, 100, 110)
+-- ========================================
+-- CONFIGURATION
+-- ========================================
+
+local Config = {
+    Theme = {
+        Primary = Color3.fromRGB(30, 30, 40),
+        Secondary = Color3.fromRGB(40, 40, 50),
+        Accent = Color3.fromRGB(0, 120, 215),
+        Text = Color3.fromRGB(240, 240, 240),
+        SubText = Color3.fromRGB(180, 180, 180),
+        Success = Color3.fromRGB(50, 200, 100),
+        Danger = Color3.fromRGB(220, 60, 60),
+        Border = Color3.fromRGB(60, 60, 70),
+        ToggleOn = Color3.fromRGB(50, 180, 80),
+        ToggleOff = Color3.fromRGB(100, 100, 110)
+    },
+    
+    Window = {
+        DefaultSize = {500, 400},
+        CornerRadius = 8,
+        BorderThickness = 1
+    },
+    
+    TitleBar = {
+        Height = 40,
+        FontSize = 18,
+        Font = Enum.Font.Gotham
+    },
+    
+    Tabs = {
+        Width = 120,
+        ButtonHeight = 35,
+        Padding = 5,
+        CornerRadius = 6
+    },
+    
+    Elements = {
+        Height = 35,
+        Padding = 10,
+        FontSize = 14,
+        Font = Enum.Font.Gotham,
+        CornerRadius = 6
+    },
+    
+    Toggle = {
+        Width = 50,
+        Height = 25,
+        KnobSize = 21,
+        KnobPadding = 2
+    },
+    
+    Animation = {
+        Duration = 0.2,
+        Style = Enum.EasingStyle.Quad,
+        Direction = Enum.EasingDirection.Out
+    }
 }
 
--- Utility Functions
-local function Create(class, props)
-    local obj = Instance.new(class)
-    for prop, value in pairs(props) do
-        if prop == "Parent" then
-            obj.Parent = value
-        else
-            obj[prop] = value
+-- ========================================
+-- UTILITY FUNCTIONS
+-- ========================================
+
+local Utilities = {}
+
+function Utilities.Create(className, properties)
+    local instance = Instance.new(className)
+    for property, value in pairs(properties) do
+        if property ~= "Parent" then
+            instance[property] = value
         end
     end
-    return obj
+    if properties.Parent then
+        instance.Parent = properties.Parent
+    end
+    return instance
 end
 
-local function Tween(obj, props, duration, style, direction)
-    local tweenInfo = TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out)
-    game:GetService("TweenService"):Create(obj, tweenInfo, props):Play()
+function Utilities.Tween(instance, properties, duration, easingStyle, easingDirection)
+    local tweenInfo = TweenInfo.new(
+        duration or Config.Animation.Duration,
+        easingStyle or Config.Animation.Style,
+        easingDirection or Config.Animation.Direction
+    )
+    game:GetService("TweenService"):Create(instance, tweenInfo, properties):Play()
 end
 
--- Main Library Functions
-function Library:CreateWindow(title)
-    local Window = {}
-    Window.Tabs = {}
-    Window.ActiveTab = nil
-    
-    -- Create ScreenGui
-    local ScreenGui = Create("ScreenGui", {
-        Name = "UILibrary",
-        Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+function Utilities.ApplyCorner(parent, radius)
+    return Utilities.Create("UICorner", {
+        CornerRadius = UDim.new(0, radius or Config.Elements.CornerRadius),
+        Parent = parent
     })
-    
-    -- Main Container
-    local MainFrame = Create("Frame", {
-        Name = "MainFrame",
-        Parent = ScreenGui,
-        Size = UDim2.new(0, 500, 0, 400),
-        Position = UDim2.new(0.5, -250, 0.5, -200),
-        BackgroundColor3 = Theme.Primary,
-        BorderSizePixel = 0,
-        ClipsDescendants = true
+end
+
+function Utilities.ApplyStroke(parent, color, thickness)
+    return Utilities.Create("UIStroke", {
+        Parent = parent,
+        Color = color or Config.Theme.Border,
+        Thickness = thickness or Config.Window.BorderThickness
     })
-    
-    Create("UICorner", {
-        CornerRadius = UDim.new(0, 8),
-        Parent = MainFrame
+end
+
+function Utilities.ApplyListLayout(parent, padding, sortOrder)
+    return Utilities.Create("UIListLayout", {
+        Parent = parent,
+        Padding = UDim.new(0, padding or Config.Elements.Padding),
+        SortOrder = sortOrder or Enum.SortOrder.LayoutOrder
     })
-    
-    Create("UIStroke", {
-        Parent = MainFrame,
-        Color = Theme.Border,
-        Thickness = 1
+end
+
+function Utilities.ApplyPadding(parent, left, top, right, bottom)
+    return Utilities.Create("UIPadding", {
+        Parent = parent,
+        PaddingLeft = UDim.new(0, left or 0),
+        PaddingTop = UDim.new(0, top or 0),
+        PaddingRight = UDim.new(0, right or 0),
+        PaddingBottom = UDim.new(0, bottom or 0)
     })
-    
-    -- Title Bar
-    local TitleBar = Create("Frame", {
-        Name = "TitleBar",
-        Parent = MainFrame,
-        Size = UDim2.new(1, 0, 0, 40),
-        BackgroundColor3 = Theme.Secondary,
-        BorderSizePixel = 0
-    })
-    
-    Create("UICorner", {
-        CornerRadius = UDim.new(0, 8),
-        Parent = TitleBar
-    })
-    
-    local TitleLabel = Create("TextLabel", {
-        Name = "TitleLabel",
-        Parent = TitleBar,
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        Text = title or "UI Library",
-        TextColor3 = Theme.Text,
-        TextSize = 18,
-        Font = Enum.Font.Gotham,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    -- Close Button
-    local CloseButton = Create("TextButton", {
-        Name = "CloseButton",
-        Parent = TitleBar,
-        Size = UDim2.new(0, 30, 0, 30),
-        Position = UDim2.new(1, -35, 0.5, -15),
-        BackgroundColor3 = Theme.Danger,
-        Text = "X",
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0
-    })
-    
-    Create("UICorner", {
-        CornerRadius = UDim.new(0, 6),
-        Parent = CloseButton
-    })
-    
-    CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-    
-    -- Drag functionality
+end
+
+-- ========================================
+-- DRAG FUNCTIONALITY
+-- ========================================
+
+local DragHandler = {}
+
+function DragHandler.MakeDraggable(frame, dragHandle)
     local dragging = false
     local dragInput, dragStart, startPos
     
-    TitleBar.InputBegan:Connect(function(input)
+    dragHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
-            startPos = MainFrame.Position
+            startPos = frame.Position
             
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -138,7 +149,7 @@ function Library:CreateWindow(title)
         end
     end)
     
-    TitleBar.InputChanged:Connect(function(input)
+    dragHandle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             dragInput = input
         end
@@ -147,23 +158,60 @@ function Library:CreateWindow(title)
     game:GetService("UserInputService").InputChanged:Connect(function(input)
         if dragging and input == dragInput then
             local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
         end
     end)
-    
-    -- Tabs Container
-    local TabsContainer = Create("Frame", {
-        Name = "TabsContainer",
-        Parent = MainFrame,
-        Size = UDim2.new(0, 120, 1, -40),
-        Position = UDim2.new(0, 0, 0, 40),
-        BackgroundColor3 = Theme.Secondary,
+end
+
+-- ========================================
+-- WINDOW COMPONENTS
+-- ========================================
+
+local Components = {}
+
+function Components.CreateTitleBar(parent, title)
+    local titleBar = Utilities.Create("Frame", {
+        Name = "TitleBar",
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, Config.TitleBar.Height),
+        BackgroundColor3 = Config.Theme.Secondary,
         BorderSizePixel = 0
     })
     
-    local TabButtons = Create("ScrollingFrame", {
+    Utilities.ApplyCorner(titleBar, Config.Window.CornerRadius)
+    
+    local titleLabel = Utilities.Create("TextLabel", {
+        Name = "TitleLabel",
+        Parent = titleBar,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = title or "UI Library",
+        TextColor3 = Config.Theme.Text,
+        TextSize = Config.TitleBar.FontSize,
+        Font = Config.TitleBar.Font,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    return titleBar
+end
+
+function Components.CreateTabContainer(parent)
+    local tabsContainer = Utilities.Create("Frame", {
+        Name = "TabsContainer",
+        Parent = parent,
+        Size = UDim2.new(0, Config.Tabs.Width, 1, -Config.TitleBar.Height),
+        Position = UDim2.new(0, 0, 0, Config.TitleBar.Height),
+        BackgroundColor3 = Config.Theme.Secondary,
+        BorderSizePixel = 0
+    })
+    
+    local scrollFrame = Utilities.Create("ScrollingFrame", {
         Name = "TabButtons",
-        Parent = TabsContainer,
+        Parent = tabsContainer,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -172,34 +220,26 @@ function Library:CreateWindow(title)
         AutomaticCanvasSize = Enum.AutomaticSize.Y
     })
     
-    Create("UIListLayout", {
-        Parent = TabButtons,
-        Padding = UDim.new(0, 5),
-        SortOrder = Enum.SortOrder.LayoutOrder
-    })
+    Utilities.ApplyListLayout(scrollFrame, Config.Tabs.Padding)
+    Utilities.ApplyPadding(scrollFrame, 5, 5, 5, 5)
     
-    Create("UIPadding", {
-        Parent = TabButtons,
-        PaddingLeft = UDim.new(0, 5),
-        PaddingTop = UDim.new(0, 5),
-        PaddingRight = UDim.new(0, 5),
-        PaddingBottom = UDim.new(0, 5)
-    })
-    
-    -- Content Container
-    local ContentContainer = Create("Frame", {
+    return scrollFrame
+end
+
+function Components.CreateContentContainer(parent)
+    local contentContainer = Utilities.Create("Frame", {
         Name = "ContentContainer",
-        Parent = MainFrame,
-        Size = UDim2.new(1, -120, 1, -40),
-        Position = UDim2.new(0, 120, 0, 40),
-        BackgroundColor3 = Theme.Primary,
+        Parent = parent,
+        Size = UDim2.new(1, -Config.Tabs.Width, 1, -Config.TitleBar.Height),
+        Position = UDim2.new(0, Config.Tabs.Width, 0, Config.TitleBar.Height),
+        BackgroundColor3 = Config.Theme.Primary,
         BorderSizePixel = 0,
         ClipsDescendants = true
     })
     
-    local TabContent = Create("ScrollingFrame", {
+    local scrollFrame = Utilities.Create("ScrollingFrame", {
         Name = "TabContent",
-        Parent = ContentContainer,
+        Parent = contentContainer,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -208,356 +248,358 @@ function Library:CreateWindow(title)
         AutomaticCanvasSize = Enum.AutomaticSize.Y
     })
     
-    Create("UIListLayout", {
-        Parent = TabContent,
-        Padding = UDim.new(0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder
+    Utilities.ApplyListLayout(scrollFrame)
+    Utilities.ApplyPadding(scrollFrame, 15, 15, 15, 15)
+    
+    return scrollFrame
+end
+
+-- ========================================
+-- ELEMENT BUILDERS
+-- ========================================
+
+local Elements = {}
+
+function Elements.CreateButton(parent, text, callback)
+    local button = {}
+    
+    local frame = Utilities.Create("Frame", {
+        Name = text .. "Button",
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, Config.Elements.Height),
+        BackgroundColor3 = Config.Theme.Secondary,
+        BorderSizePixel = 0
     })
     
-    Create("UIPadding", {
-        Parent = TabContent,
-        PaddingLeft = UDim.new(0, 15),
-        PaddingTop = UDim.new(0, 15),
-        PaddingRight = UDim.new(0, 15),
-        PaddingBottom = UDim.new(0, 15)
+    Utilities.ApplyCorner(frame)
+    Utilities.ApplyStroke(frame)
+    
+    local label = Utilities.Create("TextLabel", {
+        Name = "ButtonLabel",
+        Parent = frame,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Config.Theme.Text,
+        TextSize = Config.Elements.FontSize,
+        Font = Config.Elements.Font,
+        TextWrapped = true
     })
     
-    -- Window Methods
-    function Window:CreateTab(name)
-        local Tab = {}
-        Tab.Name = name
-        Tab.Elements = {}
-        Tab.Visible = false
-        
-        -- Tab Button
-        local TabButton = Create("TextButton", {
-            Name = name .. "TabButton",
-            Parent = TabButtons,
-            Size = UDim2.new(1, 0, 0, 35),
-            BackgroundColor3 = Theme.Primary,
-            Text = name,
-            TextColor3 = Theme.SubText,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            AutoButtonColor = false,
-            BorderSizePixel = 0
-        })
-        
-        Create("UICorner", {
-            CornerRadius = UDim.new(0, 6),
-            Parent = TabButton
-        })
-        
-        -- Tab Content Frame
-        local TabFrame = Create("Frame", {
-            Name = name .. "TabFrame",
-            Parent = TabContent,
-            Size = UDim2.new(1, 0, 0, 0),
-            BackgroundTransparency = 1,
-            Visible = false
-        })
-        
-        Create("UIListLayout", {
-            Parent = TabFrame,
-            Padding = UDim.new(0, 10),
-            SortOrder = Enum.SortOrder.LayoutOrder
-        })
-        
-        Create("UIPadding", {
-            Parent = TabFrame,
-            PaddingLeft = UDim.new(0, 5),
-            PaddingRight = UDim.new(0, 5)
-        })
-        
-        -- Activate this tab when clicked
-        TabButton.MouseButton1Click:Connect(function()
-            Window:SwitchTab(Tab)
-        end)
-        
-        -- Hover effects
-        TabButton.MouseEnter:Connect(function()
-            if not Tab.Visible then
-                Tween(TabButton, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
-            end
-        end)
-        
-        TabButton.MouseLeave:Connect(function()
-            if not Tab.Visible then
-                Tween(TabButton, {BackgroundColor3 = Theme.Primary}, 0.2)
-            end
-        end)
-        
-        -- Tab Methods
-        function Tab:CreateButton(text, callback)
-            local Button = {}
-            
-            local ButtonFrame = Create("Frame", {
-                Name = text .. "Button",
-                Parent = TabFrame,
-                Size = UDim2.new(1, 0, 0, 35),
-                BackgroundColor3 = Theme.Secondary,
-                BorderSizePixel = 0
-            })
-            
-            Create("UICorner", {
-                CornerRadius = UDim.new(0, 6),
-                Parent = ButtonFrame
-            })
-            
-            Create("UIStroke", {
-                Parent = ButtonFrame,
-                Color = Theme.Border,
-                Thickness = 1
-            })
-            
-            local ButtonLabel = Create("TextLabel", {
-                Name = "ButtonLabel",
-                Parent = ButtonFrame,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = text,
-                TextColor3 = Theme.Text,
-                TextSize = 14,
-                Font = Enum.Font.Gotham,
-                TextWrapped = true
-            })
-            
-            -- Click functionality
-            local function OnClick()
-                if callback then
-                    pcall(callback)
-                end
-                Tween(ButtonFrame, {BackgroundColor3 = Theme.Accent}, 0.1)
-                wait(0.1)
-                Tween(ButtonFrame, {BackgroundColor3 = Theme.Secondary}, 0.1)
-            end
-            
-            ButtonFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    Tween(ButtonFrame, {BackgroundColor3 = Theme.Accent}, 0.1)
-                end
-            end)
-            
-            ButtonFrame.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    OnClick()
-                end
-            end)
-            
-            -- Hover effects
-            ButtonFrame.MouseEnter:Connect(function()
-                Tween(ButtonFrame, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
-                Tween(ButtonLabel, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
-            end)
-            
-            ButtonFrame.MouseLeave:Connect(function()
-                Tween(ButtonFrame, {BackgroundColor3 = Theme.Secondary}, 0.2)
-                Tween(ButtonLabel, {TextColor3 = Theme.Text}, 0.2)
-            end)
-            
-            -- Method to update button
-            function Button:Update(newText, newCallback)
-                ButtonLabel.Text = newText or text
-                callback = newCallback or callback
-            end
-            
-            table.insert(self.Elements, Button)
-            return Button
+    local function onClick()
+        if callback then
+            pcall(callback)
         end
-        
-        function Tab:CreateToggle(text, callback)
-            local Toggle = {}
-            Toggle.State = false
-            
-            local ToggleFrame = Create("Frame", {
-                Name = text .. "Toggle",
-                Parent = TabFrame,
-                Size = UDim2.new(1, 0, 0, 35),
-                BackgroundColor3 = Theme.Secondary,
-                BorderSizePixel = 0
-            })
-            
-            Create("UICorner", {
-                CornerRadius = UDim.new(0, 6),
-                Parent = ToggleFrame
-            })
-            
-            Create("UIStroke", {
-                Parent = ToggleFrame,
-                Color = Theme.Border,
-                Thickness = 1
-            })
-            
-            local ToggleLabel = Create("TextLabel", {
-                Name = "ToggleLabel",
-                Parent = ToggleFrame,
-                Size = UDim2.new(0.7, -5, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = text,
-                TextColor3 = Theme.Text,
-                TextSize = 14,
-                Font = Enum.Font.Gotham,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true
-            })
-            
-            local ToggleButton = Create("Frame", {
-                Name = "ToggleButton",
-                Parent = ToggleFrame,
-                Size = UDim2.new(0, 50, 0, 25),
-                Position = UDim2.new(1, -65, 0.5, -12.5),
-                BackgroundColor3 = Theme.ToggleOff,
-                BorderSizePixel = 0
-            })
-            
-            Create("UICorner", {
-                CornerRadius = UDim.new(0, 25),
-                Parent = ToggleButton
-            })
-            
-            local ToggleKnob = Create("Frame", {
-                Name = "ToggleKnob",
-                Parent = ToggleButton,
-                Size = UDim2.new(0, 21, 0, 21),
-                Position = UDim2.new(0, 2, 0.5, -10.5),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                BorderSizePixel = 0
-            })
-            
-            Create("UICorner", {
-                CornerRadius = UDim.new(0, 21),
-                Parent = ToggleKnob
-            })
-            
-            -- Toggle functionality
-            local function ToggleState()
-                Toggle.State = not Toggle.State
-                
-                if Toggle.State then
-                    Tween(ToggleButton, {BackgroundColor3 = Theme.ToggleOn}, 0.2)
-                    Tween(ToggleKnob, {Position = UDim2.new(0, 27, 0.5, -10.5)}, 0.2)
-                else
-                    Tween(ToggleButton, {BackgroundColor3 = Theme.ToggleOff}, 0.2)
-                    Tween(ToggleKnob, {Position = UDim2.new(0, 2, 0.5, -10.5)}, 0.2)
-                end
-                
-                if callback then
-                    pcall(callback, Toggle.State)
-                end
-            end
-            
-            ToggleFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    ToggleState()
-                end
-            end)
-            
-            -- Hover effects
-            ToggleFrame.MouseEnter:Connect(function()
-                Tween(ToggleFrame, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
-                Tween(ToggleLabel, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
-            end)
-            
-            ToggleFrame.MouseLeave:Connect(function()
-                Tween(ToggleFrame, {BackgroundColor3 = Theme.Secondary}, 0.2)
-                Tween(ToggleLabel, {TextColor3 = Theme.Text}, 0.2)
-            end)
-            
-            -- Method to set toggle state
-            function Toggle:Set(state)
-                if Toggle.State ~= state then
-                    ToggleState()
-                end
-            end
-            
-            -- Method to get toggle state
-            function Toggle:Get()
-                return Toggle.State
-            end
-            
-            table.insert(self.Elements, Toggle)
-            return Toggle
-        end
-        
-        function Tab:CreateLabel(text)
-            local Label = {}
-            
-            local LabelFrame = Create("Frame", {
-                Name = text .. "Label",
-                Parent = TabFrame,
-                Size = UDim2.new(1, 0, 0, 25),
-                BackgroundTransparency = 1
-            })
-            
-            local LabelText = Create("TextLabel", {
-                Name = "LabelText",
-                Parent = LabelFrame,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = text,
-                TextColor3 = Theme.SubText,
-                TextSize = 14,
-                Font = Enum.Font.Gotham,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true
-            })
-            
-            function Label:Update(newText)
-                LabelText.Text = newText
-            end
-            
-            table.insert(self.Elements, Label)
-            return Label
-        end
-        
-        -- Set this as active tab if it's the first one
-        if #Window.Tabs == 0 then
-            Window:SwitchTab(Tab)
-        end
-        
-        table.insert(Window.Tabs, Tab)
-        return Tab
+        Utilities.Tween(frame, {BackgroundColor3 = Config.Theme.Accent}, 0.1)
+        wait(0.1)
+        Utilities.Tween(frame, {BackgroundColor3 = Config.Theme.Secondary}, 0.1)
     end
     
-    function Window:SwitchTab(tab)
-        -- Deactivate all tabs
-        for _, t in pairs(Window.Tabs) do
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Utilities.Tween(frame, {BackgroundColor3 = Config.Theme.Accent}, 0.1)
+        end
+    end)
+    
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            onClick()
+        end
+    end)
+    
+    frame.MouseEnter:Connect(function()
+        Utilities.Tween(frame, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
+        Utilities.Tween(label, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
+    end)
+    
+    frame.MouseLeave:Connect(function()
+        Utilities.Tween(frame, {BackgroundColor3 = Config.Theme.Secondary}, 0.2)
+        Utilities.Tween(label, {TextColor3 = Config.Theme.Text}, 0.2)
+    end)
+    
+    function button:Update(newText, newCallback)
+        label.Text = newText or text
+        callback = newCallback or callback
+    end
+    
+    return button
+end
+
+function Elements.CreateToggle(parent, text, callback)
+    local toggle = {}
+    toggle.State = false
+    
+    local frame = Utilities.Create("Frame", {
+        Name = text .. "Toggle",
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, Config.Elements.Height),
+        BackgroundColor3 = Config.Theme.Secondary,
+        BorderSizePixel = 0
+    })
+    
+    Utilities.ApplyCorner(frame)
+    Utilities.ApplyStroke(frame)
+    
+    local label = Utilities.Create("TextLabel", {
+        Name = "ToggleLabel",
+        Parent = frame,
+        Size = UDim2.new(0.7, -5, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Config.Theme.Text,
+        TextSize = Config.Elements.FontSize,
+        Font = Config.Elements.Font,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true
+    })
+    
+    local toggleButton = Utilities.Create("Frame", {
+        Name = "ToggleButton",
+        Parent = frame,
+        Size = UDim2.new(0, Config.Toggle.Width, 0, Config.Toggle.Height),
+        Position = UDim2.new(1, -Config.Toggle.Width - 15, 0.5, -Config.Toggle.Height / 2),
+        BackgroundColor3 = Config.Theme.ToggleOff,
+        BorderSizePixel = 0
+    })
+    
+    Utilities.ApplyCorner(toggleButton, Config.Toggle.Height)
+    
+    local knob = Utilities.Create("Frame", {
+        Name = "ToggleKnob",
+        Parent = toggleButton,
+        Size = UDim2.new(0, Config.Toggle.KnobSize, 0, Config.Toggle.KnobSize),
+        Position = UDim2.new(0, Config.Toggle.KnobPadding, 0.5, -Config.Toggle.KnobSize / 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0
+    })
+    
+    Utilities.ApplyCorner(knob, Config.Toggle.KnobSize)
+    
+    local function toggleState()
+        toggle.State = not toggle.State
+        
+        if toggle.State then
+            Utilities.Tween(toggleButton, {BackgroundColor3 = Config.Theme.ToggleOn}, 0.2)
+            Utilities.Tween(knob, {Position = UDim2.new(0, Config.Toggle.Width - Config.Toggle.KnobSize - Config.Toggle.KnobPadding, 0.5, -Config.Toggle.KnobSize / 2)}, 0.2)
+        else
+            Utilities.Tween(toggleButton, {BackgroundColor3 = Config.Theme.ToggleOff}, 0.2)
+            Utilities.Tween(knob, {Position = UDim2.new(0, Config.Toggle.KnobPadding, 0.5, -Config.Toggle.KnobSize / 2)}, 0.2)
+        end
+        
+        if callback then
+            pcall(callback, toggle.State)
+        end
+    end
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            toggleState()
+        end
+    end)
+    
+    frame.MouseEnter:Connect(function()
+        Utilities.Tween(frame, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
+        Utilities.Tween(label, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
+    end)
+    
+    frame.MouseLeave:Connect(function()
+        Utilities.Tween(frame, {BackgroundColor3 = Config.Theme.Secondary}, 0.2)
+        Utilities.Tween(label, {TextColor3 = Config.Theme.Text}, 0.2)
+    end)
+    
+    function toggle:Set(state)
+        if toggle.State ~= state then
+            toggleState()
+        end
+    end
+    
+    function toggle:Get()
+        return toggle.State
+    end
+    
+    return toggle
+end
+
+function Elements.CreateLabel(parent, text)
+    local label = {}
+    
+    local frame = Utilities.Create("Frame", {
+        Name = text .. "Label",
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, 25),
+        BackgroundTransparency = 1
+    })
+    
+    local textLabel = Utilities.Create("TextLabel", {
+        Name = "LabelText",
+        Parent = frame,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Config.Theme.SubText,
+        TextSize = Config.Elements.FontSize,
+        Font = Config.Elements.Font,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true
+    })
+    
+    function label:Update(newText)
+        textLabel.Text = newText
+    end
+    
+    return label
+end
+
+-- ========================================
+-- TAB HANDLER
+-- ========================================
+
+local TabHandler = {}
+
+function TabHandler.CreateTab(window, tabButtons, tabContent, name)
+    local tab = {}
+    tab.Name = name
+    tab.Elements = {}
+    tab.Visible = false
+    
+    local tabButton = Utilities.Create("TextButton", {
+        Name = name .. "TabButton",
+        Parent = tabButtons,
+        Size = UDim2.new(1, 0, 0, Config.Tabs.ButtonHeight),
+        BackgroundColor3 = Config.Theme.Primary,
+        Text = name,
+        TextColor3 = Config.Theme.SubText,
+        TextSize = Config.Elements.FontSize,
+        Font = Config.Elements.Font,
+        AutoButtonColor = false,
+        BorderSizePixel = 0
+    })
+    
+    Utilities.ApplyCorner(tabButton, Config.Tabs.CornerRadius)
+    
+    local tabFrame = Utilities.Create("Frame", {
+        Name = name .. "TabFrame",
+        Parent = tabContent,
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Visible = false
+    })
+    
+    Utilities.ApplyListLayout(tabFrame)
+    Utilities.ApplyPadding(tabFrame, 5, 0, 5, 0)
+    
+    tabButton.MouseButton1Click:Connect(function()
+        window:SwitchTab(tab)
+    end)
+    
+    tabButton.MouseEnter:Connect(function()
+        if not tab.Visible then
+            Utilities.Tween(tabButton, {BackgroundColor3 = Color3.fromRGB(50, 50, 60)}, 0.2)
+        end
+    end)
+    
+    tabButton.MouseLeave:Connect(function()
+        if not tab.Visible then
+            Utilities.Tween(tabButton, {BackgroundColor3 = Config.Theme.Primary}, 0.2)
+        end
+    end)
+    
+    function tab:CreateButton(text, callback)
+        local button = Elements.CreateButton(tabFrame, text, callback)
+        table.insert(self.Elements, button)
+        return button
+    end
+    
+    function tab:CreateToggle(text, callback)
+        local toggle = Elements.CreateToggle(tabFrame, text, callback)
+        table.insert(self.Elements, toggle)
+        return toggle
+    end
+    
+    function tab:CreateLabel(text)
+        local label = Elements.CreateLabel(tabFrame, text)
+        table.insert(self.Elements, label)
+        return label
+    end
+    
+    tab._button = tabButton
+    tab._frame = tabFrame
+    
+    return tab
+end
+
+-- ========================================
+-- MAIN WINDOW
+-- ========================================
+
+function Library:CreateWindow(title)
+    local window = {}
+    window.Tabs = {}
+    window.ActiveTab = nil
+    
+    local screenGui = Utilities.Create("ScreenGui", {
+        Name = "UILibrary",
+        Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    })
+    
+    local mainFrame = Utilities.Create("Frame", {
+        Name = "MainFrame",
+        Parent = screenGui,
+        Size = UDim2.new(0, Config.Window.DefaultSize[1], 0, Config.Window.DefaultSize[2]),
+        Position = UDim2.new(0.5, -Config.Window.DefaultSize[1] / 2, 0.5, -Config.Window.DefaultSize[2] / 2),
+        BackgroundColor3 = Config.Theme.Primary,
+        BorderSizePixel = 0,
+        ClipsDescendants = true
+    })
+    
+    Utilities.ApplyCorner(mainFrame, Config.Window.CornerRadius)
+    Utilities.ApplyStroke(mainFrame)
+    
+    local titleBar = Components.CreateTitleBar(mainFrame, title)
+    local tabButtons = Components.CreateTabContainer(mainFrame)
+    local tabContent = Components.CreateContentContainer(mainFrame)
+    
+    DragHandler.MakeDraggable(mainFrame, titleBar)
+    
+    function window:CreateTab(name)
+        local tab = TabHandler.CreateTab(self, tabButtons, tabContent, name)
+        
+        if #self.Tabs == 0 then
+            self:SwitchTab(tab)
+        end
+        
+        table.insert(self.Tabs, tab)
+        return tab
+    end
+    
+    function window:SwitchTab(tab)
+        for _, t in pairs(self.Tabs) do
             t.Visible = false
-            -- Update tab button
-            local btn = ScreenGui:FindFirstChild(t.Name .. "TabButton")
-            if btn then
-                Tween(btn, {BackgroundColor3 = Theme.Primary, TextColor3 = Theme.SubText}, 0.2)
+            if t._button then
+                Utilities.Tween(t._button, {BackgroundColor3 = Config.Theme.Primary, TextColor3 = Config.Theme.SubText}, 0.2)
             end
-            -- Hide tab content
-            local frame = TabContent:FindFirstChild(t.Name .. "TabFrame")
-            if frame then
-                frame.Visible = false
+            if t._frame then
+                t._frame.Visible = false
             end
         end
         
-        -- Activate selected tab
         tab.Visible = true
-        Window.ActiveTab = tab
+        self.ActiveTab = tab
         
-        -- Update tab button
-        local btn = ScreenGui:FindFirstChild(tab.Name .. "TabButton")
-        if btn then
-            Tween(btn, {BackgroundColor3 = Theme.Accent, TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
+        if tab._button then
+            Utilities.Tween(tab._button, {BackgroundColor3 = Config.Theme.Accent, TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
         end
-        
-        -- Show tab content
-        local frame = TabContent:FindFirstChild(tab.Name .. "TabFrame")
-        if frame then
-            frame.Visible = true
+        if tab._frame then
+            tab._frame.Visible = true
         end
     end
     
-    function Window:Destroy()
-        ScreenGui:Destroy()
+    function window:Destroy()
+        screenGui:Destroy()
     end
     
-    return Window
+    return window
 end
 
 return Library
