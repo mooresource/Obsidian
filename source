@@ -1,13 +1,7 @@
--- ========================================
--- ROBLOX UI LIBRARY - MODULAR VERSION
--- ========================================
-
 local Library = {}
 Library.__index = Library
 
--- ========================================
--- CONFIGURATION
--- ========================================
+--// CONFIGURATION
 
 local Config = {
     Theme = {
@@ -64,9 +58,7 @@ local Config = {
     }
 }
 
--- ========================================
--- UTILITY FUNCTIONS
--- ========================================
+--// UTILITY FUNCTIONS
 
 local Utilities = {}
 
@@ -125,9 +117,7 @@ function Utilities.ApplyPadding(parent, left, top, right, bottom)
     })
 end
 
--- ========================================
--- DRAG FUNCTIONALITY
--- ========================================
+--// DRAG FUNCTIONALITY
 
 local DragHandler = {}
 
@@ -166,9 +156,7 @@ function DragHandler.MakeDraggable(frame, dragHandle)
     end)
 end
 
--- ========================================
--- WINDOW COMPONENTS
--- ========================================
+--// WINDOW COMPONENTS
 
 local Components = {}
 
@@ -254,9 +242,7 @@ function Components.CreateContentContainer(parent)
     return scrollFrame
 end
 
--- ========================================
--- ELEMENT BUILDERS
--- ========================================
+--// ELEMENT BUILDERS
 
 local Elements = {}
 
@@ -451,460 +437,7 @@ function Elements.CreateLabel(parent, text)
     return label
 end
 
-function Elements.CreateSlider(parent, text, min, max, default, callback)
-    local slider = {}
-    slider.Value = default or min
-    
-    local frame = Utilities.Create("Frame", {
-        Name = text .. "Slider",
-        Parent = parent,
-        Size = UDim2.new(1, 0, 0, 50),
-        BackgroundColor3 = Config.Theme.Secondary,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(frame)
-    Utilities.ApplyStroke(frame)
-    
-    local label = Utilities.Create("TextLabel", {
-        Name = "SliderLabel",
-        Parent = frame,
-        Size = UDim2.new(1, -20, 0, 20),
-        Position = UDim2.new(0, 10, 0, 5),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = Config.Theme.Text,
-        TextSize = Config.Elements.FontSize,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    local valueLabel = Utilities.Create("TextLabel", {
-        Name = "ValueLabel",
-        Parent = frame,
-        Size = UDim2.new(0, 50, 0, 20),
-        Position = UDim2.new(1, -60, 0, 5),
-        BackgroundTransparency = 1,
-        Text = tostring(slider.Value),
-        TextColor3 = Config.Theme.Accent,
-        TextSize = Config.Elements.FontSize,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Right
-    })
-    
-    local sliderBar = Utilities.Create("Frame", {
-        Name = "SliderBar",
-        Parent = frame,
-        Size = UDim2.new(1, -20, 0, 4),
-        Position = UDim2.new(0, 10, 1, -15),
-        BackgroundColor3 = Config.Theme.Border,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(sliderBar, 2)
-    
-    local sliderFill = Utilities.Create("Frame", {
-        Name = "SliderFill",
-        Parent = sliderBar,
-        Size = UDim2.new((slider.Value - min) / (max - min), 0, 1, 0),
-        BackgroundColor3 = Config.Theme.Accent,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(sliderFill, 2)
-    
-    local sliderKnob = Utilities.Create("Frame", {
-        Name = "SliderKnob",
-        Parent = sliderBar,
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = UDim2.new((slider.Value - min) / (max - min), -6, 0.5, -6),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(sliderKnob, 12)
-    
-    local dragging = false
-    
-    local function updateSlider(input)
-        local pos = (input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X
-        pos = math.clamp(pos, 0, 1)
-        slider.Value = math.floor(min + (max - min) * pos)
-        
-        valueLabel.Text = tostring(slider.Value)
-        Utilities.Tween(sliderFill, {Size = UDim2.new(pos, 0, 1, 0)}, 0.1)
-        Utilities.Tween(sliderKnob, {Position = UDim2.new(pos, -6, 0.5, -6)}, 0.1)
-        
-        if callback then
-            pcall(callback, slider.Value)
-        end
-    end
-    
-    sliderBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            updateSlider(input)
-        end
-    end)
-    
-    sliderBar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updateSlider(input)
-        end
-    end)
-    
-    function slider:SetValue(value)
-        value = math.clamp(value, min, max)
-        slider.Value = value
-        local pos = (value - min) / (max - min)
-        valueLabel.Text = tostring(value)
-        Utilities.Tween(sliderFill, {Size = UDim2.new(pos, 0, 1, 0)}, 0.2)
-        Utilities.Tween(sliderKnob, {Position = UDim2.new(pos, -6, 0.5, -6)}, 0.2)
-    end
-    
-    function slider:GetValue()
-        return slider.Value
-    end
-    
-    return slider
-end
-
-function Elements.CreateTextBox(parent, text, placeholder, callback)
-    local textbox = {}
-    
-    local frame = Utilities.Create("Frame", {
-        Name = text .. "TextBox",
-        Parent = parent,
-        Size = UDim2.new(1, 0, 0, 50),
-        BackgroundColor3 = Config.Theme.Secondary,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(frame)
-    Utilities.ApplyStroke(frame)
-    
-    local label = Utilities.Create("TextLabel", {
-        Name = "TextBoxLabel",
-        Parent = frame,
-        Size = UDim2.new(1, -20, 0, 20),
-        Position = UDim2.new(0, 10, 0, 5),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = Config.Theme.Text,
-        TextSize = Config.Elements.FontSize,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    local input = Utilities.Create("TextBox", {
-        Name = "Input",
-        Parent = frame,
-        Size = UDim2.new(1, -20, 0, 20),
-        Position = UDim2.new(0, 10, 0, 25),
-        BackgroundColor3 = Config.Theme.Primary,
-        BorderSizePixel = 0,
-        Text = "",
-        PlaceholderText = placeholder or "Enter text...",
-        TextColor3 = Config.Theme.Text,
-        PlaceholderColor3 = Config.Theme.SubText,
-        TextSize = Config.Elements.FontSize - 2,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false
-    })
-    
-    Utilities.ApplyCorner(input, 4)
-    Utilities.ApplyPadding(input, 8, 0, 8, 0)
-    
-    input.FocusLost:Connect(function(enterPressed)
-        if callback and enterPressed then
-            pcall(callback, input.Text)
-        end
-    end)
-    
-    function textbox:SetText(newText)
-        input.Text = newText
-    end
-    
-    function textbox:GetText()
-        return input.Text
-    end
-    
-    return textbox
-end
-
-function Elements.CreateDropdown(parent, text, options, callback)
-    local dropdown = {}
-    dropdown.Selected = options[1] or "None"
-    dropdown.Options = options
-    dropdown.Open = false
-    
-    local frame = Utilities.Create("Frame", {
-        Name = text .. "Dropdown",
-        Parent = parent,
-        Size = UDim2.new(1, 0, 0, Config.Elements.Height),
-        BackgroundColor3 = Config.Theme.Secondary,
-        BorderSizePixel = 0,
-        ClipsDescendants = false
-    })
-    
-    Utilities.ApplyCorner(frame)
-    Utilities.ApplyStroke(frame)
-    
-    local label = Utilities.Create("TextLabel", {
-        Name = "DropdownLabel",
-        Parent = frame,
-        Size = UDim2.new(0.5, -5, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = Config.Theme.Text,
-        TextSize = Config.Elements.FontSize,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    local selected = Utilities.Create("TextLabel", {
-        Name = "Selected",
-        Parent = frame,
-        Size = UDim2.new(0.5, -25, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 0),
-        BackgroundTransparency = 1,
-        Text = dropdown.Selected,
-        TextColor3 = Config.Theme.Accent,
-        TextSize = Config.Elements.FontSize,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Right
-    })
-    
-    local arrow = Utilities.Create("TextLabel", {
-        Name = "Arrow",
-        Parent = frame,
-        Size = UDim2.new(0, 20, 1, 0),
-        Position = UDim2.new(1, -25, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "▼",
-        TextColor3 = Config.Theme.SubText,
-        TextSize = 10,
-        Font = Config.Elements.Font
-    })
-    
-    local optionsFrame = Utilities.Create("Frame", {
-        Name = "OptionsFrame",
-        Parent = frame,
-        Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 1, 5),
-        BackgroundColor3 = Config.Theme.Secondary,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 10
-    })
-    
-    Utilities.ApplyCorner(optionsFrame)
-    Utilities.ApplyStroke(optionsFrame)
-    
-    local optionsList = Utilities.Create("ScrollingFrame", {
-        Name = "OptionsList",
-        Parent = optionsFrame,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 3,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y
-    })
-    
-    Utilities.ApplyListLayout(optionsList, 2)
-    Utilities.ApplyPadding(optionsList, 5, 5, 5, 5)
-    
-    for _, option in ipairs(options) do
-        local optionButton = Utilities.Create("TextButton", {
-            Name = option,
-            Parent = optionsList,
-            Size = UDim2.new(1, 0, 0, 25),
-            BackgroundColor3 = Config.Theme.Primary,
-            Text = option,
-            TextColor3 = Config.Theme.Text,
-            TextSize = Config.Elements.FontSize - 2,
-            Font = Config.Elements.Font,
-            AutoButtonColor = false,
-            BorderSizePixel = 0
-        })
-        
-        Utilities.ApplyCorner(optionButton, 4)
-        
-        optionButton.MouseButton1Click:Connect(function()
-            dropdown.Selected = option
-            selected.Text = option
-            dropdown.Open = false
-            optionsFrame.Visible = false
-            Utilities.Tween(optionsFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-            Utilities.Tween(arrow, {Rotation = 0}, 0.2)
-            
-            if callback then
-                pcall(callback, option)
-            end
-        end)
-        
-        optionButton.MouseEnter:Connect(function()
-            Utilities.Tween(optionButton, {BackgroundColor3 = Config.Theme.Accent}, 0.1)
-        end)
-        
-        optionButton.MouseLeave:Connect(function()
-            Utilities.Tween(optionButton, {BackgroundColor3 = Config.Theme.Primary}, 0.1)
-        end)
-    end
-    
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dropdown.Open = not dropdown.Open
-            optionsFrame.Visible = dropdown.Open
-            
-            if dropdown.Open then
-                local height = math.min(#options * 27 + 10, 150)
-                Utilities.Tween(optionsFrame, {Size = UDim2.new(1, 0, 0, height)}, 0.2)
-                Utilities.Tween(arrow, {Rotation = 180}, 0.2)
-            else
-                Utilities.Tween(optionsFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                Utilities.Tween(arrow, {Rotation = 0}, 0.2)
-            end
-        end
-    end)
-    
-    function dropdown:SetValue(value)
-        if table.find(options, value) then
-            dropdown.Selected = value
-            selected.Text = value
-        end
-    end
-    
-    function dropdown:GetValue()
-        return dropdown.Selected
-    end
-    
-    function dropdown:UpdateOptions(newOptions)
-        dropdown.Options = newOptions
-        optionsList:ClearAllChildren()
-        Utilities.ApplyListLayout(optionsList, 2)
-        Utilities.ApplyPadding(optionsList, 5, 5, 5, 5)
-        
-        for _, option in ipairs(newOptions) do
-            local optionButton = Utilities.Create("TextButton", {
-                Name = option,
-                Parent = optionsList,
-                Size = UDim2.new(1, 0, 0, 25),
-                BackgroundColor3 = Config.Theme.Primary,
-                Text = option,
-                TextColor3 = Config.Theme.Text,
-                TextSize = Config.Elements.FontSize - 2,
-                Font = Config.Elements.Font,
-                AutoButtonColor = false,
-                BorderSizePixel = 0
-            })
-            
-            Utilities.ApplyCorner(optionButton, 4)
-            
-            optionButton.MouseButton1Click:Connect(function()
-                dropdown.Selected = option
-                selected.Text = option
-                dropdown.Open = false
-                optionsFrame.Visible = false
-                Utilities.Tween(optionsFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                
-                if callback then
-                    pcall(callback, option)
-                end
-            end)
-        end
-    end
-    
-    return dropdown
-end
-
-function Elements.CreateKeybind(parent, text, defaultKey, callback)
-    local keybind = {}
-    keybind.Key = defaultKey or Enum.KeyCode.E
-    keybind.Listening = false
-    
-    local frame = Utilities.Create("Frame", {
-        Name = text .. "Keybind",
-        Parent = parent,
-        Size = UDim2.new(1, 0, 0, Config.Elements.Height),
-        BackgroundColor3 = Config.Theme.Secondary,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(frame)
-    Utilities.ApplyStroke(frame)
-    
-    local label = Utilities.Create("TextLabel", {
-        Name = "KeybindLabel",
-        Parent = frame,
-        Size = UDim2.new(0.6, -5, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = Config.Theme.Text,
-        TextSize = Config.Elements.FontSize,
-        Font = Config.Elements.Font,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    
-    local keyLabel = Utilities.Create("TextLabel", {
-        Name = "KeyLabel",
-        Parent = frame,
-        Size = UDim2.new(0.4, -15, 0, 25),
-        Position = UDim2.new(0.6, 5, 0.5, -12.5),
-        BackgroundColor3 = Config.Theme.Primary,
-        Text = keybind.Key.Name,
-        TextColor3 = Config.Theme.Accent,
-        TextSize = Config.Elements.FontSize - 2,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0
-    })
-    
-    Utilities.ApplyCorner(keyLabel, 4)
-    
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            keybind.Listening = true
-            keyLabel.Text = "..."
-            Utilities.Tween(keyLabel, {BackgroundColor3 = Config.Theme.Accent}, 0.2)
-        end
-    end)
-    
-    game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-        if keybind.Listening and input.UserInputType == Enum.UserInputType.Keyboard then
-            keybind.Key = input.KeyCode
-            keybind.Listening = false
-            keyLabel.Text = input.KeyCode.Name
-            Utilities.Tween(keyLabel, {BackgroundColor3 = Config.Theme.Primary}, 0.2)
-        elseif not gameProcessed and input.KeyCode == keybind.Key and callback then
-            pcall(callback)
-        end
-    end)
-    
-    function keybind:SetKey(key)
-        keybind.Key = key
-        keyLabel.Text = key.Name
-    end
-    
-    function keybind:GetKey()
-        return keybind.Key
-    end
-    
-    return keybind
-end
-
--- ========================================
--- TAB HANDLER
--- ========================================
+--// TAB HANDLER
 
 local TabHandler = {}
 
@@ -980,9 +513,7 @@ function TabHandler.CreateTab(window, tabButtons, tabContent, name)
     return tab
 end
 
--- ========================================
--- MAIN WINDOW
--- ========================================
+--// MAIN WINDOW
 
 function Library:CreateWindow(title)
     local window = {}
