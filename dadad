@@ -1,0 +1,21 @@
+local UserInput = game:GetService('UserInputService')
+local TweenService = game:GetService('TweenService')
+local Player = game:GetService('Players').LocalPlayer
+local ShootingBar = Player.PlayerGui.Visual.Shooting.Bar
+
+
+local fillDuration = 0.001  -- Adjustable: 0.001 for instant, higher for gradual
+local key = Enum.KeyCode.E
+
+
+UserInput.InputBegan:Connect(function(input, gameProcessedEvent)
+if gameProcessedEvent or input.KeyCode ~= key then return end
+if not Player.Character:FindFirstChild('Basketball') or not ShootingBar then return end
+
+
+-- Fill instantly on press (no holding needed)
+ShootingBar:TweenSize(UDim2.new(1, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Linear, fillDuration, true)
+task.wait(fillDuration)  -- Wait for tween to finish
+ShootingBar.Size = UDim2.new(1, 0, 1, 0)  -- Ensure it's fully set
+
+end)
