@@ -1,21 +1,433 @@
-local UserInput = game:GetService('UserInputService')
-local TweenService = game:GetService('TweenService')
-local Player = game:GetService('Players').LocalPlayer
-local ShootingBar = Player.PlayerGui.Visual.Shooting.Bar
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
-local fillDuration = 0.001  -- Adjustable: 0.001 for instant, higher for gradual
-local key = Enum.KeyCode.E
+local Options = Library.Options
+local Toggles = Library.Toggles
 
+local Window = Library:CreateWindow({
+    Title = "Primary",
+    Footer = "by @wrl11 & @aylonthegiant | discord.gg/epNcR8Ce89",
+    NotifySide = "Right",
+    ShowCustomCursor = false,
+})
 
-UserInput.InputBegan:Connect(function(input, gameProcessedEvent)
-if gameProcessedEvent or input.KeyCode ~= key then return end
-if not Player.Character:FindFirstChild('Basketball') or not ShootingBar then return end
+local Tabs = {
+    Main = Window:AddTab("Main", "house"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "monitor"),
+}
 
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- Fill instantly on press (no holding needed)
-ShootingBar:TweenSize(UDim2.new(1, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Linear, fillDuration, true)
-task.wait(fillDuration)  -- Wait for tween to finish
-ShootingBar.Size = UDim2.new(1, 0, 1, 0)  -- Ensure it's fully set
+-- Auto Shoot Variables
+local AutoShootGroup = Tabs.Main:AddLeftGroupbox("Auto Shoot")
+local shootingBar = player.PlayerGui:WaitForChild("Visual"):WaitForChild("Shooting"):WaitForChild("Bar")
+local shootButton = player.PlayerGui:WaitForChild("Main"):WaitForChild("Mobile"):WaitForChild("Holder"):WaitForChild("Shoot")
+local shootEnabled = false
+local fillDuration = 0.001
+local shootConnection = nil
 
+-- Steal Reach Variables
+local StealReachGroup = Tabs.Main:AddRightGroupbox("Steal Reach")
+local stealReachEnabled = false
+local reachSize = 5
+local savedSizes = {}
+local savedTransparency = {}
+local reachConnection = nil
+local characterConnection = nil
+
+-- Magnet Variables (Replaces Auto Guard)
+local MagnetGroup = Tabs.Main:AddRightGroupbox("Ball Magnet")
+local magnetEnabled = false
+local magnetConnection = nil
+
+-- Magnet Function
+local function startMagnet()
+    if magnetConnection then
+        magnetConnection:Disconnect()
+        magnetConnection = nil
+    end
+    
+    magnetConnection = RunService.Heartbeat:Connect(function()
+        if not magnetEnabled then return end
+        
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v:IsA("BasePart") and v.Name == "Basketball" then
+                v.Size = Vector3.new(15, 15, 15)
+                v.CanCollide = false
+            end
+        end
+    end)
+end
+
+local function stopMagnet()
+    if magnetConnection then
+        magnetConnection:Disconnect()
+        magnetConnection = nil
+    end
+    
+    -- Restore original size of basketballs
+    for _, v in ipairs(workspace:GetChildren()) do
+        if v:IsA("BasePart") and v.Name == "Basketball" then
+            v.Size = Vector3.new(3, 3, 3) -- Default basketball size
+            v.CanCollide = true
+        end
+    end
+end
+
+-- Magnet UI Elements
+MagnetGroup:AddToggle("MagnetToggle", {
+    Text = "Ball Magnet",
+    Default = false,
+    Tooltip = "Makes basketballs bigger and non-collidable",
+    Callback = function(value)
+        magnetEnabled = value
+        if value then
+            startMagnet()
+        else
+            stopMagnet()
+        end
+    end
+})
+
+MagnetGroup:AddSlider("MagnetSize", {
+    Text = "Ball Size",
+    Default = 15,
+    Min = 5,
+    Max = 50,
+    Rounding = 1,
+    Tooltip = "Size of the basketball magnet effect",
+    Callback = function(value)
+        if magnetEnabled then
+            for _, v in ipairs(workspace:GetChildren()) do
+                if v:IsA("BasePart") and v.Name == "Basketball" then
+                    v.Size = Vector3.new(value, value, value)
+                end
+            end
+        end
+    end
+})
+
+-- Auto Shoot Functions
+local function handleShoot()
+    if not player.Character:FindFirstChild('Basketball') then 
+        return 
+    end
+    
+    if not shootingBar then 
+        return 
+    end
+    
+    shootingBar:TweenSize(UDim2.new(1, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Linear, fillDuration, true)
+    task.wait(fillDuration)
+    shootingBar.Size = UDim2.new(1, 0, 1, 0)
+end
+
+local function startAutoShoot()
+    if shootConnection then
+        shootConnection:Disconnect()
+        shootConnection = nil
+    end
+    
+    shootButton.MouseButton1Click:Connect(function()
+        if shootEnabled then
+            handleShoot()
+        end
+    end)
+    
+    shootButton.MouseButton1Down:Connect(function()
+        if shootEnabled then
+            handleShoot()
+        end
+    end)
+    
+    shootButton.Activated:Connect(function()
+        if shootEnabled then
+            handleShoot()
+        end
+    end)
+    
+    shootConnection = RunService.Heartbeat:Connect(function()
+        if shootEnabled and player.Character:FindFirstChild('Basketball') then
+            handleShoot()
+        end
+    end)
+end
+
+local function stopAutoShoot()
+    if shootConnection then
+        shootConnection:Disconnect()
+        shootConnection = nil
+    end
+end
+
+AutoShootGroup:AddToggle("AutoShootToggle", {
+    Text = "Auto Shoot",
+    Default = false,
+    Tooltip = "Automatically shoots with perfect timing",
+    Callback = function(value)
+        shootEnabled = value
+        if value then
+            startAutoShoot()
+        else
+            stopAutoShoot()
+        end
+    end
+})
+
+AutoShootGroup:AddSlider("ShootSpeed", {
+    Text = "Shoot Speed",
+    Default = 0.001,
+    Min = 0.001,
+    Max = 0.1,
+    Rounding = 3,
+    Tooltip = "Adjust the shooting speed",
+    Callback = function(value)
+        fillDuration = value
+    end
+})
+
+-- Steal Reach Functions
+local function getArms(character)
+    local arms = {}
+    
+    local rightHand = character:FindFirstChild("RightHand")
+    local leftHand = character:FindFirstChild("LeftHand")
+    local rightLowerArm = character:FindFirstChild("RightLowerArm")
+    local leftLowerArm = character:FindFirstChild("LeftLowerArm")
+    local rightUpperArm = character:FindFirstChild("RightUpperArm")
+    local leftUpperArm = character:FindFirstChild("LeftUpperArm")
+    
+    if rightHand then table.insert(arms, rightHand) end
+    if leftHand then table.insert(arms, leftHand) end
+    if rightLowerArm then table.insert(arms, rightLowerArm) end
+    if leftLowerArm then table.insert(arms, leftLowerArm) end
+    if rightUpperArm then table.insert(arms, rightUpperArm) end
+    if leftUpperArm then table.insert(arms, leftUpperArm) end
+    
+    return arms
+end
+
+local function saveSizes(arms)
+    for _, arm in pairs(arms) do
+        if not savedSizes[arm] then
+            savedSizes[arm] = arm.Size
+            savedTransparency[arm] = arm.Transparency
+        end
+    end
+end
+
+local function makeArmsBig(character)
+    local arms = getArms(character)
+    saveSizes(arms)
+    
+    for _, arm in pairs(arms) do
+        arm.Size = Vector3.new(reachSize, reachSize, reachSize)
+        arm.Transparency = 1
+        arm.Massless = true
+        arm.CanCollide = false
+    end
+end
+
+local function setupCharacter(character)
+    task.wait(1)
+    makeArmsBig(character)
+end
+
+local function startStealReach()
+    if reachConnection then
+        reachConnection:Disconnect()
+        reachConnection = nil
+    end
+    
+    if characterConnection then
+        characterConnection:Disconnect()
+        characterConnection = nil
+    end
+    
+    reachConnection = RunService.Heartbeat:Connect(function()
+        local character = player.Character
+        if not character then return end
+        
+        local arms = getArms(character)
+        
+        for _, arm in pairs(arms) do
+            if savedSizes[arm] then
+                arm.Size = Vector3.new(reachSize, reachSize, reachSize)
+                arm.Transparency = 1
+                arm.Massless = true
+                arm.CanCollide = false
+            end
+        end
+    end)
+    
+    if player.Character then
+        setupCharacter(player.Character)
+    end
+    
+    characterConnection = player.CharacterAdded:Connect(setupCharacter)
+end
+
+local function stopStealReach()
+    if reachConnection then
+        reachConnection:Disconnect()
+        reachConnection = nil
+    end
+    
+    if characterConnection then
+        characterConnection:Disconnect()
+        characterConnection = nil
+    end
+    
+    local character = player.Character
+    if character then
+        local arms = getArms(character)
+        for _, arm in pairs(arms) do
+            if savedSizes[arm] then
+                arm.Size = savedSizes[arm]
+                arm.Transparency = savedTransparency[arm] or 0
+                arm.Massless = false
+                arm.CanCollide = true
+            end
+        end
+    end
+    
+    savedSizes = {}
+    savedTransparency = {}
+end
+
+StealReachGroup:AddToggle("StealReachToggle", {
+    Text = "Steal Reach",
+    Default = false,
+    Tooltip = "Increases reach for stealing",
+    Callback = function(value)
+        stealReachEnabled = value
+        if value then
+            startStealReach()
+        else
+            stopStealReach()
+        end
+    end
+})
+
+StealReachGroup:AddSlider("ReachSizeSlider", {
+    Text = "Reach Size",
+    Default = 5,
+    Min = 1,
+    Max = 20,
+    Rounding = 1,
+    Tooltip = "Adjust steal reach size",
+    Callback = function(value)
+        reachSize = value
+        if stealReachEnabled then
+            stopStealReach()
+            startStealReach()
+        end
+    end
+})
+
+-- UI Settings
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
+
+MenuGroup:AddToggle("KeybindMenuOpen", {
+    Default = Library.KeybindFrame.Visible,
+    Text = "Open Keybind Menu",
+    Callback = function(value)
+        Library.KeybindFrame.Visible = value
+    end,
+})
+
+MenuGroup:AddToggle("ShowCustomCursor", {
+    Text = "Custom Cursor",
+    Default = false,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end,
+})
+
+MenuGroup:AddDropdown("NotificationSide", {
+    Values = { "Left", "Right" },
+    Default = "Right",
+    Text = "Notification Side",
+    Callback = function(Value)
+        Library:SetNotifySide(Value)
+    end,
+})
+
+MenuGroup:AddDropdown("DPIDropdown", {
+    Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+    Default = "100%",
+    Text = "DPI Scale",
+    Callback = function(Value)
+        Value = Value:gsub("%%", "")
+        local DPI = tonumber(Value)
+        Library:SetDPIScale(DPI)
+    end,
+})
+
+MenuGroup:AddDivider()
+
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { 
+    Default = "LeftControl", 
+    NoUI = true, 
+    Text = "Menu keybind" 
+})
+
+MenuGroup:AddButton("Unload", function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("ThemeManager", true)
+MenuGroup:AddLabel("SaveManager", true)
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+
+ThemeManager:SetFolder("Primary")
+SaveManager:SetFolder("Primary/configs")
+
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+
+SaveManager:LoadAutoloadConfig()
+
+Library:OnUnload(function()
+    Library.Unloaded = true
+    if shootConnection then
+        shootConnection:Disconnect()
+    end
+    if reachConnection then
+        reachConnection:Disconnect()
+    end
+    if characterConnection then
+        characterConnection:Disconnect()
+    end
+    if magnetConnection then
+        magnetConnection:Disconnect()
+        -- Restore basketballs when unloading
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v:IsA("BasePart") and v.Name == "Basketball" then
+                v.Size = Vector3.new(3, 3, 3)
+                v.CanCollide = true
+            end
+        end
+    end
 end)
