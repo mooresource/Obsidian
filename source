@@ -16,8 +16,12 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local HTTPService = game:GetService("HttpService")
+
+-- Get touch position utility
+local function getTouchPosition()
+    local touch = UserInputService:GetMouseLocation() -- Works for both mouse and touch
+    return Vector2.new(touch.X, touch.Y)
+end
 
 function Library:Create(table)
     local windowName = table.Name
@@ -156,24 +160,62 @@ function Library:Create(table)
         container.Parent = main
         container.Visible = false
 
-        --// Event
-        main1.MouseButton1Click:Connect(function()
-            for _,v in pairs(game.CoreGui:FindFirstChild('dark_UI').main:GetChildren()) do
-                if v.Name == "container" then
-                    v.Visible = false
+        --// Event - Universal click/touch
+        main1.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                for _,v in pairs(game.CoreGui:FindFirstChild('dark_UI').main:GetChildren()) do
+                    if v.Name == "container" then
+                        v.Visible = false
+                    end
                 end
-            end
-            for _,v in pairs(game.CoreGui['dark_UI'].main.tabContainer:GetChildren()) do
-                if v:IsA('TextButton') then
-                    game:GetService('TweenService'):Create(v, TweenInfo.new(0.3), {TextTransparency = 0.5}):Play()
+                for _,v in pairs(game.CoreGui['dark_UI'].main.tabContainer:GetChildren()) do
+                    if v:IsA('TextButton') then
+                        game:GetService('TweenService'):Create(v, TweenInfo.new(0.3), {TextTransparency = 0.5}):Play()
+                    end
                 end
+                container.Visible = true
+                game:GetService('TweenService'):Create(main1, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
             end
-            container.Visible = true
-            game:GetService('TweenService'):Create(main1, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
         end)
 
         --// Elements
         local ElementHandler = {}
+        
+        -- Generic interaction handler
+        local function setupInteraction(element, callback)
+            local isPressed = false
+            
+            element.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isPressed = true
+                    game:GetService('TweenService'):Create(element, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(47,47,47)}):Play()
+                end
+            end)
+            
+            element.InputEnded:Connect(function(input)
+                if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isPressed then
+                    isPressed = false
+                    game:GetService('TweenService'):Create(element, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
+                    if callback then
+                        callback()
+                    end
+                end
+            end)
+            
+            -- Remove hover, keep selection feedback
+            element.SelectionGained:Connect(function()
+                if not isPressed then
+                    game:GetService('TweenService'):Create(element, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(43,43,43)}):Play()
+                end
+            end)
+            
+            element.SelectionLost:Connect(function()
+                if not isPressed then
+                    game:GetService('TweenService'):Create(element, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
+                end
+            end)
+        end
+
         function ElementHandler:Label(text)
             local label = Instance.new("Frame")
             label.Name = "label"
@@ -243,21 +285,10 @@ function Library:Create(table)
             imageLabel.Parent = button
 
             button.Parent = holder
-
-            button.MouseEnter:Connect(function()
-                game:GetService('TweenService'):Create(button, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(43,43,43)}):Play()
-            end)
-
-            button.MouseLeave:Connect(function()
-                game:GetService('TweenService'):Create(button, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
-            end)
-
-            button.MouseButton1Click:Connect(function()
-                callback()
-            end)
+            setupInteraction(button, callback)
         end
 
-        function ElementHandler:Slider(text, default, min, max, callback) -- slider stuff mainly not made by me
+        function ElementHandler:Slider(text, default, min, max, callback)
             text = text or "Slider"
             callback = callback or function() end
 
@@ -329,37 +360,48 @@ function Library:Create(table)
             slider.Parent = holder
             textLabel2.Text = tostring(default)
 
-            local hovered = false
-            local down = false
-
-            slider.MouseEnter:Connect(function()
-                hovered = true
-                game:GetService('TweenService'):Create(slider, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(43,43,43)}):Play()
-            end)
-
-            slider.MouseLeave:Connect(function()
-                if not down then
-                    game:GetService('TweenService'):Create(slider, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
-                end
-            end)
-    
-            game:GetService('UserInputService').InputEnded:connect(function(key)
-                if key.UserInputType == Enum.UserInputType.MouseButton1 then
-                    down = false
-                    game:GetService('TweenService'):Create(slider, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
-                end
-            end)
-    
-            slider.MouseButton1Down:connect(function()
-                game:GetService('TweenService'):Create(slider, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(47,47,47)}):Play()
-                down = true
-                while RunService.RenderStepped:wait() and down do
-                    local percentage = math.clamp((Mouse.X - frame1.AbsolutePosition.X) / (frame1.AbsoluteSize.X), 0, 1)
-                    local value = ((max - min) * percentage) + min
-                    value = math.floor(value)
+            local isDragging = false
+            
+            setupInteraction(slider)
+            
+            slider.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = true
+                    
+                    -- Direct update on tap for mobile
+                    local touchPos = getTouchPosition()
+                    local relativeX = (touchPos.X - frame.AbsolutePosition.X) / frame.AbsoluteSize.X
+                    local percentage = math.clamp(relativeX, 0, 1)
+                    local value = math.floor(((max - min) * percentage) + min)
+                    
                     textLabel2.Text = value
-                    local tween = game:GetService('TweenService'):Create(frame1, TweenInfo.new(0.06), {Size = UDim2.fromScale(percentage, 1)}):Play()
+                    frame1.Size = UDim2.fromScale(percentage, 1)
                     callback(value)
+                    
+                    -- Continuous dragging
+                    while isDragging and RunService.RenderStepped:Wait() do
+                        if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.Touch) then
+                            isDragging = false
+                            break
+                        end
+                        
+                        local currentTouchPos = getTouchPosition()
+                        local currentRelativeX = (currentTouchPos.X - frame.AbsolutePosition.X) / frame.AbsoluteSize.X
+                        local currentPercentage = math.clamp(currentRelativeX, 0, 1)
+                        local currentValue = math.floor(((max - min) * currentPercentage) + min)
+                        
+                        if currentValue ~= tonumber(textLabel2.Text) then
+                            textLabel2.Text = currentValue
+                            frame1.Size = UDim2.fromScale(currentPercentage, 1)
+                            callback(currentValue)
+                        end
+                    end
+                end
+            end)
+            
+            slider.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = false
                 end
             end)
         end
@@ -415,16 +457,8 @@ function Library:Create(table)
             toggle1.Parent = holder
 
             local tog = false
-
-            toggle1.MouseEnter:Connect(function()
-                game:GetService('TweenService'):Create(toggle1, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(43,43,43)}):Play()
-            end)
-
-            toggle1.MouseLeave:Connect(function()
-                game:GetService('TweenService'):Create(toggle1, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
-            end)
-
-            toggle1.MouseButton1Click:Connect(function()
+            
+            local function updateToggle()
                 tog = not tog
                 callback(tog)
                 if tog then
@@ -434,7 +468,9 @@ function Library:Create(table)
                     game:GetService('TweenService'):Create(frame3, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
                     game:GetService('TweenService'):Create(uIStroke1, TweenInfo.new(0.2), {Color = Color3.fromRGB(76, 76, 76)}):Play()
                 end
-            end)
+            end
+            
+            setupInteraction(toggle1, updateToggle)
         end
 
         function ElementHandler:Textbox(text, callback)
@@ -483,14 +519,13 @@ function Library:Create(table)
             textBox.Parent = textbox
             textbox.Parent = holder
 
-            textbox.MouseEnter:Connect(function()
-                game:GetService('TweenService'):Create(textbox, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(43,43,43)}):Play()
-            end)
-
-            textbox.MouseLeave:Connect(function()
-                game:GetService('TweenService'):Create(textbox, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(38,38,38)}):Play()
-            end)
-
+            -- Setup interaction for textbox container
+            local function handleTextboxInteraction()
+                textBox:CaptureFocus()
+            end
+            
+            setupInteraction(textbox, handleTextboxInteraction)
+            
             textBox.FocusLost:Connect(function()
                 callback(textBox.Text)
             end)
@@ -498,18 +533,45 @@ function Library:Create(table)
 
         return ElementHandler
     end
-    --// Drag - not by me
-    main.MouseEnter:Connect(function()
-        local Input = main.InputBegan:connect(function(Key)
-            if Key.UserInputType == Enum.UserInputType.MouseButton1 then
-                local ObjectPosition = Vector2.new(Mouse.X - main.AbsolutePosition.X, Mouse.Y - main.AbsolutePosition.Y)
-                while RunService.RenderStepped:wait() and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-                    local FrameX, FrameY = math.clamp(Mouse.X - ObjectPosition.X, 0, dark_UI.AbsoluteSize.X - main.AbsoluteSize.X), math.clamp(Mouse.Y - ObjectPosition.Y, 0, dark_UI.AbsoluteSize.Y - main.AbsoluteSize.Y)
-                    game:GetService('TweenService'):Create(main, TweenInfo.new(0.1), {Position = UDim2.fromOffset(FrameX + (main.Size.X.Offset * main.AnchorPoint.X), FrameY + (main.Size.Y.Offset * main.AnchorPoint.Y))}):Play()
-                    game:GetService('TweenService'):Create(shadow, TweenInfo.new(0.1), {Position = UDim2.fromOffset(FrameX + (main.Size.X.Offset * main.AnchorPoint.X), FrameY + (main.Size.Y.Offset * main.AnchorPoint.Y))}):Play()
-                end
-            end
-        end)
+    
+    --// Drag - Universal for mouse and touch
+    local isDragging = false
+    local dragStartPos
+    local mainStartPos
+    
+    local function startDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            dragStartPos = getTouchPosition()
+            mainStartPos = main.Position
+        end
+    end
+    
+    local function endDrag()
+        isDragging = false
+    end
+    
+    main.InputBegan:Connect(startDrag)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endDrag()
+        end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if isDragging then
+            local currentPos = getTouchPosition()
+            local delta = currentPos - dragStartPos
+            local newX = mainStartPos.X.Offset + delta.X
+            local newY = mainStartPos.Y.Offset + delta.Y
+            
+            -- Clamp to screen bounds
+            local safeX = math.clamp(newX, 0, dark_UI.AbsoluteSize.X - main.AbsoluteSize.X)
+            local safeY = math.clamp(newY, 0, dark_UI.AbsoluteSize.Y - main.AbsoluteSize.Y)
+            
+            main.Position = UDim2.new(mainStartPos.X.Scale, safeX, mainStartPos.Y.Scale, safeY)
+            shadow.Position = UDim2.new(mainStartPos.X.Scale, safeX, mainStartPos.Y.Scale, safeY)
+        end
     end)
 
     --// Make the first tab visible
